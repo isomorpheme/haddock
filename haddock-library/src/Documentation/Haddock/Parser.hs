@@ -81,6 +81,7 @@ overIdentifier f d = g d
     g (DocOrderedList x) = DocOrderedList $ fmap (\(index, a) -> (index, g a)) x
     g (DocDefList x) = DocDefList $ fmap (\(y, z) -> (g y, g z)) x
     g (DocCodeBlock x) = DocCodeBlock $ g x
+    g (DocCodeBlockHighlight hl) = DocCodeBlockHighlight hl
     g (DocHyperlink (Hyperlink u x)) = DocHyperlink (Hyperlink u (fmap g x))
     g (DocPic x) = DocPic x
     g (DocMathInline x) = DocMathInline x
