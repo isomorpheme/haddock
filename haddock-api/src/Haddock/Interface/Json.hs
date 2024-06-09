@@ -147,6 +147,16 @@ jsonDoc (DocCodeBlock x) = jsonObject
     , ("document", jsonDoc x)
     ]
 
+jsonDoc (DocCodeBlockHighlight hl) = jsonObject
+    [ ("tag", jsonString "DocCodeBlockHighlight")
+    , ("document", jsonHighlight hl)
+    ]
+  where
+    jsonHighlight Highlight{..} = jsonObject
+        [ ("highlightLanguage", jsonString highlightLanguage)
+        , ("highlightContent", jsonString highlightContent)
+        ]
+
 jsonDoc (DocHyperlink hyperlink) = jsonObject
     [ ("tag", jsonString "DocHyperlink")
     , ("hyperlink", jsonHyperlink hyperlink)
