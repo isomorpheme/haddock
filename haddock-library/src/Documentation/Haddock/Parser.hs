@@ -41,7 +41,7 @@ import           Prelude hiding (takeWhile)
 import qualified Prelude as P
 
 import qualified Text.Parsec as Parsec
-import           Text.Parsec (try)
+import           Text.Parsec (try, manyTill, anyChar, newline)
 
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -332,6 +332,7 @@ paragraph = choice' [ examples
                                  , orderedList indent
                                  , birdtracks
                                  , codeblock
+                                 , codeblockHighlight
                                  , property
                                  , header
                                  , textParagraphThatStartsWithMarkdownLink
@@ -772,6 +773,19 @@ endOfLine = void "\n" <|> Parsec.eof
 -- Right (DocProperty "hello world")
 property :: Parser (DocH mod a)
 property = DocProperty . T.unpack . T.strip <$> ("prop>" *> takeWhile1 (/= '\n'))
+
+-- Parses a markdown code block with triple backticks
+codeblockHighlight :: Parser (DocH mod id)
+codeblockHighlight = do
+  _ <- string "```"
+  lang <- manyTill anyChar (try newline)
+  content <- manyTill anyChar (try (string "```"))
+  return $ DocCodeBlockHighlight $ Highlight (trim lang) content
+
+-- Helper function to trim leading and trailing whitespace
+trim :: String -> String
+trim = f . f
+   where f = reverse . dropWhile (== ' ')
 
 -- |
 -- Paragraph level codeblock. Anything between the two delimiting \@ is parsed

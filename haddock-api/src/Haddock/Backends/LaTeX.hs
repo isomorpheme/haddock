@@ -1267,6 +1267,7 @@ latexMarkup = Markup
   , markupOrderedList          = \p v -> blockElem (enumeratedList (map (\(_, p') -> p' v empty) p))
   , markupDefList              = \l v -> blockElem (descriptionList (map (\(a,b) -> (a v empty, b v empty)) l))
   , markupCodeBlock            = \p _ -> blockElem (quote (verb (p Verb empty)))
+  , markupCodeBlockHighlight   = \p _ -> blockElem (quote (verb (vcat (map text (lines (highlightContent p))))))
   , markupHyperlink            = \(Hyperlink u l) v -> inlineElem (markupLink u (fmap (\x -> x v empty) l))
   , markupAName                = \_ _ -> id -- TODO
   , markupProperty             = \p _ -> blockElem (quote (verb (text p)))
