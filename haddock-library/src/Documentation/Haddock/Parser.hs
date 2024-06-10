@@ -776,42 +776,44 @@ endOfLine = void "\n" <|> Parsec.eof
 property :: Parser (DocH mod a)
 property = DocProperty . T.unpack . T.strip <$> ("prop>" *> takeWhile1 (/= '\n'))
 
--- Parses a markdown-style code block with triple backticks
+-- | Parses a code block with triple backticks for highlighting (markdown syntax).
+-- The indentation in the code block is relative to the position of the opening
+-- backticks.
+--
+-- ```haskell
+-- -- | Directions have opposites:
+-- --  ```haskell
+-- --  data Dir = North | East | South | West
+-- --    deriving (Show, Eq)
+-- --
+-- --  opposite :: Dir -> Dir
+-- --  opposite North = South
+-- --  opposite South = North
+-- --  opposite East  = West
+-- --  opposite West  = East
+-- --  ```
+-- ```
 codeblockHighlight :: Text -> Parser (DocH mod id)
-codeblockHighlight indent = do
-  codeBlockHighlight' (T.length indent)
-
-codeBlockHighlight' :: Int -> Parser (DocH mod id)
-codeBlockHighlight' indent =
-  DocCodeBlockHighlight <$> highlight
+codeblockHighlight indent = DocCodeBlockHighlight <$> pHighlight
   where
-
-    highlight :: Parser Highlight
-    highlight = Highlight
+    pHighlight :: Parser Highlight
+    pHighlight = Highlight
       <$  string "```"
       <*> pLang
-      <*> (intercalate "\n" <$> pLines)
-
-    pIndent :: Parser Text
-    pIndent = string (T.replicate indent " ")
-
-    -- a block ends using a newline and ``` on the next line
-    pBlockEnd :: Parser Text
-    pBlockEnd = pIndent *> string "```" <* newline
+      <*> (intercalate "\n" <$> manyTill pCodeLine pBlockEnd)
 
     pLang :: Parser String
-    pLang = skipHorizontalSpace
+    pLang =  skipHorizontalSpace
           *> many1 alphaNum
           <* skipHorizontalSpace
           <* newline
 
-    pLine :: Parser String
-    pLine = pure "" <$> newline
-          <|> pIndent *> manyTill anyChar (try newline)
+    pBlockEnd :: Parser Text
+    pBlockEnd = string indent *> string "```" <* newline
 
-    pLines :: Parser [String]
-    pLines =    ([] <$ pBlockEnd)
-            <|> (:) <$> pLine <*> pLines
+    pCodeLine :: Parser String
+    pCodeLine = pure "" <$> newline
+          <|> string indent *> manyTill anyChar (try newline)
 
 
 -- |
