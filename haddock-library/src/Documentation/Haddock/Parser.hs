@@ -16,11 +16,13 @@
 --
 -- @'toRegular' . '_doc' . 'parseParas'@
 module Documentation.Haddock.Parser (
+  parse,
   parseString,
   parseParas,
   overIdentifier,
   toRegular,
-  Identifier
+  Identifier,
+  codeblockHighlight
 ) where
 
 import           Control.Applicative
@@ -776,11 +778,13 @@ property = DocProperty . T.unpack . T.strip <$> ("prop>" *> takeWhile1 (/= '\n')
 
 -- Parses a markdown code block with triple backticks
 codeblockHighlight :: Parser (DocH mod id)
-codeblockHighlight = do
-  _ <- string "```"
-  lang <- manyTill anyChar (try newline)
-  content <- manyTill anyChar (try (string "```"))
-  return $ DocCodeBlockHighlight $ Highlight (trim lang) content
+codeblockHighlight = DocCodeBlockHighlight <$>
+  (
+    Highlight
+      <$ string "```"
+      <*> (trim <$> manyTill anyChar newline)
+      <*> manyTill anyChar (try (newline <* skipHorizontalSpace  <* string "```"))
+  )
 
 -- Helper function to trim leading and trailing whitespace
 trim :: String -> String
