@@ -43,7 +43,7 @@ import           Prelude hiding (takeWhile)
 import qualified Prelude as P
 
 import qualified Text.Parsec as Parsec
-import           Text.Parsec (try, manyTill, anyChar, newline)
+import           Text.Parsec (try, manyTill, anyChar, newline, alphaNum, many1)
 
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -334,7 +334,7 @@ paragraph = choice' [ examples
                                  , orderedList indent
                                  , birdtracks
                                  , codeblock
-                                 , codeblockHighlight
+                                 , codeblockHighlight indent
                                  , property
                                  , header
                                  , textParagraphThatStartsWithMarkdownLink
@@ -776,20 +776,43 @@ endOfLine = void "\n" <|> Parsec.eof
 property :: Parser (DocH mod a)
 property = DocProperty . T.unpack . T.strip <$> ("prop>" *> takeWhile1 (/= '\n'))
 
--- Parses a markdown code block with triple backticks
-codeblockHighlight :: Parser (DocH mod id)
-codeblockHighlight = DocCodeBlockHighlight <$>
-  (
-    Highlight
-      <$ string "```"
-      <*> (trim <$> manyTill anyChar newline)
-      <*> manyTill anyChar (try (newline <* skipHorizontalSpace  <* string "```"))
-  )
+-- Parses a markdown-style code block with triple backticks
+codeblockHighlight :: Text -> Parser (DocH mod id)
+codeblockHighlight indent = do
+  codeBlockHighlight' (T.length indent)
 
--- Helper function to trim leading and trailing whitespace
-trim :: String -> String
-trim = f . f
-   where f = reverse . dropWhile (== ' ')
+codeBlockHighlight' :: Int -> Parser (DocH mod id)
+codeBlockHighlight' indent =
+  DocCodeBlockHighlight <$> highlight
+  where
+
+    highlight :: Parser Highlight
+    highlight = Highlight
+      <$  string "```"
+      <*> pLang
+      <*> (intercalate "\n" <$> pLines)
+
+    pIndent :: Parser Text
+    pIndent = string (T.replicate indent " ")
+
+    -- a block ends using a newline and ``` on the next line
+    pBlockEnd :: Parser Text
+    pBlockEnd = pIndent *> string "```" <* newline
+
+    pLang :: Parser String
+    pLang = skipHorizontalSpace
+          *> many1 alphaNum
+          <* skipHorizontalSpace
+          <* newline
+
+    pLine :: Parser String
+    pLine = pure "" <$> newline
+          <|> pIndent *> manyTill anyChar (try newline)
+
+    pLines :: Parser [String]
+    pLines =    ([] <$ pBlockEnd)
+            <|> (:) <$> pLine <*> pLines
+
 
 -- |
 -- Paragraph level codeblock. Anything between the two delimiting \@ is parsed
