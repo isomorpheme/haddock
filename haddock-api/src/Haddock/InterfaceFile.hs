@@ -620,6 +620,11 @@ instance (Binary mod, Binary id) => Binary (DocH mod id) where
               24 -> do
                     af <- get bh
                     return (DocModule af)
+              25 -> do
+                    lang <- get bh
+                    content <- get bh
+                    return (DocCodeBlockHighlight (Highlight lang content))
+
               _ -> error "invalid binary data found in the interface file"
 
 
