@@ -780,40 +780,42 @@ property = DocProperty . T.unpack . T.strip <$> ("prop>" *> takeWhile1 (/= '\n')
 -- The indentation in the code block is relative to the position of the opening
 -- backticks.
 --
+-- The parser does not process identifiers for linking (such as the codeBlock
+-- parser).
+--
+-- Example syntax:
+--
 -- ```haskell
--- -- | Directions have opposites:
--- --  ```haskell
--- --  data Dir = North | East | South | West
--- --    deriving (Show, Eq)
--- --
--- --  opposite :: Dir -> Dir
--- --  opposite North = South
--- --  opposite South = North
--- --  opposite East  = West
--- --  opposite West  = East
+-- -- ```haskell
+-- -- fac :: Int -> Int
+-- -- fac 0 = 1
+-- -- fac n = n * fac (n - 1)
 -- --  ```
 -- ```
 codeblockHighlight :: Text -> Parser (DocH mod id)
 codeblockHighlight indent = DocCodeBlockHighlight <$> pHighlight
   where
     pHighlight :: Parser Highlight
-    pHighlight = Highlight
-      <$  string "```"
-      <*> pLang
-      <*> (intercalate "\n" <$> manyTill pCodeLine pBlockEnd)
+    pHighlight =
+      Highlight
+        <$  string "```"
+        <*> pLang
+        <*> (intercalate "\n" <$> manyTill pCodeLine pBlockEnd)
 
     pLang :: Parser String
-    pLang =  skipHorizontalSpace
-          *> many1 alphaNum
-          <* skipHorizontalSpace
-          <* newline
+    pLang =
+      skipHorizontalSpace
+        *> many1 alphaNum
+        <* skipHorizontalSpace
+        <* newline
 
-    pBlockEnd :: Parser Text
-    pBlockEnd = string indent *> string "```" <* newline
+    pBlockEnd :: Parser ()
+    pBlockEnd = void (string indent *> string "```" <* newline)
 
     pCodeLine :: Parser String
-    pCodeLine = pure "" <$> newline
-          <|> string indent *> manyTill anyChar (try newline)
+    pCodeLine =
+      pure "" <$> newline -- we don't require indentation for empty lines
+        <|> string indent *> manyTill anyChar (try newline)
 
 
 -- |
